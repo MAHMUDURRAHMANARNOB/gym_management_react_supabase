@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+      "target": "es6",
+      "module": "esnext",
+      "moduleResolution": "node",
+      "jsx": "react-jsx",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      "isolatedModules": true,
+      "types": ["node"] // Add this line to include Node.js type definitions
+    },
+    "include": ["src/**/*", "src/api/api.ts"], // Ensure api.ts is included
+    "exclude": ["node_modules"]
+  }
