@@ -1,17 +1,21 @@
 // src/pages/Payments.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Select, InputLabel, FormControl } from '@mui/material';
+import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Select, InputLabel, FormControl, CircularProgress } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import { SelectChangeEvent } from '@mui/material/Select';
-import { useSelector } from 'react-redux';
+import { useSelector, TypedUseSelectorHook } from 'react-redux';
 import { getPayments, createPayment } from '../api/api';
 import { AxiosError } from 'axios';
 import { Payment } from '../api/api';
+import { RootState } from '../store/index'; // Updated import
+
+const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 function Payments() {
   const navigate = useNavigate();
+  const { email } = useTypedSelector((state) => state.auth);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filterDate, setFilterDate] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
@@ -25,21 +29,24 @@ function Payments() {
     payment_method: 'Cash',
   });
   const [error, setError] = useState('');
-  const { token } = useSelector((state: any) => state.auth);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        const response = await getPayments(token);
+        setLoading(true); // Start loading
+        const response = await getPayments(email);
         setPayments(response);
         setError('');
       } catch (err) {
         const axiosError = err as AxiosError<{ message: string }>;
         setError(axiosError.response?.data?.message || 'Failed to fetch payments');
+      } finally {
+        setLoading(false); // Stop loading
       }
     };
     fetchPayments();
-  }, [token]);
+  }, [email]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
     const { name, value } = e.target;
@@ -51,8 +58,8 @@ function Payments() {
 
   const handleSubmit = async () => {
     try {
-    //   await createPayment(token, formData as Payment);
-      const response = await getPayments(token);
+      await createPayment(email, formData as Payment);
+      const response = await getPayments(email);
       setPayments(response);
       setFormData({
         member_id: 0,
@@ -85,7 +92,7 @@ function Payments() {
   ];
 
   return (
-    <Box>
+    <Box sx={{ padding: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Payments</Typography>
         <Button
@@ -107,14 +114,7 @@ function Payments() {
           onChange={(e) => setFilterDate(e.target.value)}
           placeholder="YYYY-MM"
           fullWidth
-          InputLabelProps={{
-            sx: {
-              color: '#800000',
-              '&.Mui-focused': {
-                color: '#800000'
-              }
-            },
-          }}
+          InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
         />
       </Box>
 
@@ -130,14 +130,7 @@ function Payments() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': {
-                    color: '#800000'
-                  }
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Gym ID"
@@ -146,14 +139,7 @@ function Payments() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': {
-                    color: '#800000'
-                  }
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Total Amount"
@@ -163,14 +149,7 @@ function Payments() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': {
-                    color: '#800000'
-                  }
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Amount Paid"
@@ -180,14 +159,7 @@ function Payments() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': {
-                    color: '#800000'
-                  }
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Date"
@@ -216,7 +188,7 @@ function Payments() {
               </Select>
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' }}}>
+              <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' } }}>
                 Payment Method
               </InputLabel>
               <Select
@@ -242,24 +214,24 @@ function Payments() {
         </DialogActions>
       </Dialog>
 
-      <Box sx={{ height: 400, width: '100%' }}>
-        <DataGrid
-          rows={filteredPayments}
-          columns={columns}
-          pageSizeOptions={[5, 10, 20]}
-          onRowClick={(params) => navigate(`/payment-details/${params.id}`)}
-          sx={{
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#1A1A1A',
-              color: '#FFFFFF',
-            },
-            '& .MuiDataGrid-row': {
-              '&:hover': { backgroundColor: '#f5f5f5' },
-              cursor: 'pointer',
-            },
-          }}
-        />
-      </Box>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Box sx={{ height: 400, width: '100%' }}>
+          <DataGrid
+            rows={filteredPayments}
+            columns={columns}
+            pageSizeOptions={[5, 10, 20]}
+            onRowClick={(params) => navigate(`/payment-details/${params.id}`)}
+            sx={{
+              '& .MuiDataGrid-columnHeaders': { backgroundColor: '#1A1A1A', color: '#FFFFFF' },
+              '& .MuiDataGrid-row': { '&:hover': { backgroundColor: '#f5f5f5' }, cursor: 'pointer' },
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 }

@@ -20,14 +20,19 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useSelector } from 'react-redux';
+import { useSelector, TypedUseSelectorHook } from 'react-redux';
 import { getMembers, createMember, updateMember, deleteMember } from '../api/api';
 import { AxiosError } from 'axios';
 import { Member } from '../api/api';
+import { RootState } from '../store/index';
+
+const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 function Members() {
   const navigate = useNavigate();
+  const { email } = useTypedSelector((state) => state.auth); // Use email instead of token
   const [members, setMembers] = useState<Member[]>([]);
+  const [filterStatus, setFilterStatus] = useState(''); // Add status filter
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [formData, setFormData] = useState<Partial<Member>>({
@@ -50,12 +55,11 @@ function Members() {
   });
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const { token } = useSelector((state: any) => state.auth);
 
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const response = await getMembers(token);
+        const response = await getMembers(email);
         setMembers(response);
         setError('');
       } catch (err) {
@@ -64,7 +68,7 @@ function Members() {
       }
     };
     fetchMembers();
-  }, [token]);
+  }, [email]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>
@@ -78,8 +82,8 @@ function Members() {
 
   const handleAddSubmit = async () => {
     try {
-    //   await createMember(token, formData as Member);
-      const response = await getMembers(token);
+      await createMember(email, formData as Member);
+      const response = await getMembers(email);
       setMembers(response);
       setFormData({
         gym_id: '',
@@ -116,8 +120,8 @@ function Members() {
   const handleEditSubmit = async () => {
     if (editingMemberId === null) return;
     try {
-    //   await updateMember(token, editingMemberId, formData as Member);
-      const response = await getMembers(token);
+      await updateMember(editingMemberId, formData as Member);
+      const response = await getMembers(email);
       setMembers(response);
       setFormData({
         gym_id: '',
@@ -148,7 +152,7 @@ function Members() {
 
   const handleDelete = async (id: number) => {
     try {
-    //   await deleteMember(token, id);
+      await deleteMember(id);
       setMembers((prev) => prev.filter((member) => member.id !== id));
       setError('');
     } catch (err) {
@@ -156,6 +160,10 @@ function Members() {
       setError(axiosError.response?.data?.message || 'Failed to delete member');
     }
   };
+
+  const filteredMembers = filterStatus
+    ? members.filter((member) => member.status.toLowerCase() === filterStatus.toLowerCase())
+    : members;
 
   const columns: GridColDef[] = [
     { field: 'gym_id', headerName: 'Gym ID', flex: 1 },
@@ -201,19 +209,29 @@ function Members() {
   ];
 
   return (
-    <Box>
+    <Box sx={{ padding: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" color="#800000">
           Members
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => setOpenAddDialog(true)}
-        >
-          Add Member
-        </Button>
+        <Box>
+          <TextField
+            label="Filter by Status"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            placeholder="Enter status"
+            sx={{ mr: 2 }}
+            InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setOpenAddDialog(true)}
+          >
+            Add Member
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -233,12 +251,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="First Name"
@@ -247,12 +260,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Last Name"
@@ -261,12 +269,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Email"
@@ -276,12 +279,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Phone"
@@ -290,12 +288,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <FormControl fullWidth>
               <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' } }}>
@@ -314,7 +307,7 @@ function Members() {
               </Select>
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' }}}>
+              <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' } }}>
                 Status
               </InputLabel>
               <Select
@@ -333,12 +326,7 @@ function Members() {
               value={formData.height || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Weight"
@@ -346,12 +334,7 @@ function Members() {
               value={formData.weight || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Chest"
@@ -359,12 +342,7 @@ function Members() {
               value={formData.chest || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Waist"
@@ -372,12 +350,7 @@ function Members() {
               value={formData.waist || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Hips"
@@ -385,12 +358,7 @@ function Members() {
               value={formData.hips || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Blood Group"
@@ -398,12 +366,7 @@ function Members() {
               value={formData.blood_group || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="BMI"
@@ -412,12 +375,7 @@ function Members() {
               value={formData.bmi || 0}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Goal"
@@ -425,12 +383,7 @@ function Members() {
               value={formData.goal || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Gender"
@@ -438,12 +391,7 @@ function Members() {
               value={formData.gender || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
           </Box>
         </DialogContent>
@@ -468,12 +416,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="First Name"
@@ -482,12 +425,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Last Name"
@@ -496,12 +434,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Email"
@@ -511,12 +444,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Phone"
@@ -525,12 +453,7 @@ function Members() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <FormControl fullWidth>
               <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' } }}>
@@ -549,7 +472,7 @@ function Members() {
               </Select>
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' }}}>
+              <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' } }}>
                 Status
               </InputLabel>
               <Select
@@ -568,12 +491,7 @@ function Members() {
               value={formData.height || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Weight"
@@ -581,12 +499,7 @@ function Members() {
               value={formData.weight || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Chest"
@@ -594,12 +507,7 @@ function Members() {
               value={formData.chest || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Waist"
@@ -607,12 +515,7 @@ function Members() {
               value={formData.waist || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Hips"
@@ -620,12 +523,7 @@ function Members() {
               value={formData.hips || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Blood Group"
@@ -633,12 +531,7 @@ function Members() {
               value={formData.blood_group || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="BMI"
@@ -647,12 +540,7 @@ function Members() {
               value={formData.bmi || 0}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Goal"
@@ -660,12 +548,7 @@ function Members() {
               value={formData.goal || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Gender"
@@ -673,12 +556,7 @@ function Members() {
               value={formData.gender || ''}
               onChange={handleInputChange}
               fullWidth
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': { color: '#800000' },
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
           </Box>
         </DialogContent>
@@ -694,19 +572,13 @@ function Members() {
 
       <Box sx={{ height: 400, width: '100%' }}>
         <DataGrid
-          rows={members}
+          rows={filteredMembers}
           columns={columns}
           pageSizeOptions={[5, 10, 20]}
           onRowClick={(params) => navigate(`/member-details/${params.id}`)}
           sx={{
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#1A1A1A',
-              color: '#FFFFFF',
-            },
-            '& .MuiDataGrid-row': {
-              '&:hover': { backgroundColor: '#f5f5f5' },
-              cursor: 'pointer',
-            },
+            '& .MuiDataGrid-columnHeaders': { backgroundColor: '#1A1A1A', color: '#FFFFFF' },
+            '& .MuiDataGrid-row': { '&:hover': { backgroundColor: '#f5f5f5' }, cursor: 'pointer' },
           }}
         />
       </Box>

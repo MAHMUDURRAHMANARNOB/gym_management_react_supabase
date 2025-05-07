@@ -1,14 +1,18 @@
 // src/pages/Expenses.tsx
 import { useState, useEffect } from 'react';
-import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, CircularProgress } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
-import { useSelector } from 'react-redux';
+import { useSelector, TypedUseSelectorHook } from 'react-redux';
 import { getExpenses, createExpense } from '../api/api';
 import { AxiosError } from 'axios';
 import { Expense } from '../api/api';
+import { RootState } from '../store/index'; // Updated import
+
+const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 function Expenses() {
+  const { email } = useTypedSelector((state) => state.auth);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filterCategory, setFilterCategory] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
@@ -19,21 +23,24 @@ function Expenses() {
     description: '',
   });
   const [error, setError] = useState('');
-  const { token } = useSelector((state: any) => state.auth);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
-        const response = await getExpenses(token);
+        setLoading(true); // Start loading
+        const response = await getExpenses(email);
         setExpenses(response);
         setError('');
       } catch (err) {
         const axiosError = err as AxiosError<{ message: string }>;
         setError(axiosError.response?.data?.message || 'Failed to fetch expenses');
+      } finally {
+        setLoading(false); // Stop loading
       }
     };
     fetchExpenses();
-  }, [token]);
+  }, [email]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
     const { name, value } = e.target;
@@ -42,13 +49,13 @@ function Expenses() {
 
   const handleSubmit = async () => {
     try {
-    //   await createExpense(token, {
-    //     category: formData.category,
-    //     amount: parseFloat(formData.amount),
-    //     expense_date: formData.expense_date,
-    //     description: formData.description,
-    //   });
-      const response = await getExpenses(token);
+      await createExpense(email, {
+        category: formData.category,
+        amount: parseFloat(formData.amount),
+        expense_date: formData.expense_date,
+        description: formData.description,
+      });
+      const response = await getExpenses(email);
       setExpenses(response);
       setFormData({ category: '', amount: '', expense_date: '', description: '' });
       setOpenDialog(false);
@@ -71,7 +78,7 @@ function Expenses() {
   ];
 
   return (
-    <Box>
+    <Box sx={{ padding: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Expenses</Typography>
         <Button
@@ -93,14 +100,7 @@ function Expenses() {
           onChange={(e) => setFilterCategory(e.target.value)}
           placeholder="Enter category"
           fullWidth
-          InputLabelProps={{
-            sx: {
-              color: '#800000',
-              '&.Mui-focused': {
-                color: '#800000'
-              }
-            },
-          }}
+          InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
         />
       </Box>
 
@@ -115,14 +115,7 @@ function Expenses() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': {
-                    color: '#800000'
-                  }
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Amount"
@@ -132,14 +125,7 @@ function Expenses() {
               onChange={handleInputChange}
               fullWidth
               required
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': {
-                    color: '#800000'
-                  }
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
             <TextField
               label="Date"
@@ -159,14 +145,7 @@ function Expenses() {
               fullWidth
               multiline
               rows={4}
-              InputLabelProps={{
-                sx: {
-                  color: '#800000',
-                  '&.Mui-focused': {
-                    color: '#800000'
-                  }
-                },
-              }}
+              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
             />
           </Box>
         </DialogContent>
@@ -180,23 +159,24 @@ function Expenses() {
         </DialogActions>
       </Dialog>
 
-      <Box sx={{ height: 400, width: '100%' }}>
-        <DataGrid
-          rows={filteredExpenses}
-          columns={columns}
-          pageSizeOptions={[5, 10, 20]}
-          disableRowSelectionOnClick
-          sx={{
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: '#1A1A1A',
-              color: '#FFFFFF',
-            },
-            '& .MuiDataGrid-row': {
-              '&:hover': { backgroundColor: '#f5f5f5' },
-            },
-          }}
-        />
-      </Box>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Box sx={{ height: 400, width: '100%' }}>
+          <DataGrid
+            rows={filteredExpenses}
+            columns={columns}
+            pageSizeOptions={[5, 10, 20]}
+            disableRowSelectionOnClick
+            sx={{
+              '& .MuiDataGrid-columnHeaders': { backgroundColor: '#1A1A1A', color: '#FFFFFF' },
+              '& .MuiDataGrid-row': { '&:hover': { backgroundColor: '#f5f5f5' } },
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 }
