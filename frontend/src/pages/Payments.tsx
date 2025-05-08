@@ -8,8 +8,8 @@ import { SelectChangeEvent } from '@mui/material/Select';
 import { useSelector, TypedUseSelectorHook } from 'react-redux';
 import { getPayments, createPayment } from '../api/api';
 import { AxiosError } from 'axios';
-import { Payment } from '../api/api';
-import { RootState } from '../store/index'; // Updated import
+import { Payment, } from '../api/api';
+import { RootState } from '../store/index';
 
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector;
 
@@ -20,7 +20,6 @@ function Payments() {
   const [filterDate, setFilterDate] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [formData, setFormData] = useState<Partial<Payment>>({
-    member_id: 0,
     gym_id: '',
     total_amount: 0,
     amount_paid: 0,
@@ -29,12 +28,13 @@ function Payments() {
     payment_method: 'Cash',
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true); // Add loading state
+  const [loading, setLoading] = useState(true);
+  const [loadingSubmit, setLoadingSubmit] = useState(false); // Add loading state for submission
 
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        setLoading(true); // Start loading
+        setLoading(true);
         const response = await getPayments(email);
         setPayments(response);
         setError('');
@@ -42,7 +42,7 @@ function Payments() {
         const axiosError = err as AxiosError<{ message: string }>;
         setError(axiosError.response?.data?.message || 'Failed to fetch payments');
       } finally {
-        setLoading(false); // Stop loading
+        setLoading(false);
       }
     };
     fetchPayments();
@@ -52,17 +52,21 @@ function Payments() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'total_amount' || name === 'amount_paid' || name === 'member_id' ? Number(value) : value,
+      [name]: name === 'member_id' || name === 'total_amount' || name === 'amount_paid'
+      ? Number(value)
+      : name === 'is_fully_paid'
+      ? value === 'true'
+      : value,
     }));
   };
 
   const handleSubmit = async () => {
     try {
+      setLoadingSubmit(true); // Start loading
       await createPayment(email, formData as Payment);
       const response = await getPayments(email);
       setPayments(response);
       setFormData({
-        member_id: 0,
         gym_id: '',
         total_amount: 0,
         amount_paid: 0,
@@ -75,6 +79,8 @@ function Payments() {
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
       setError(axiosError.response?.data?.message || 'Failed to add payment');
+    } finally {
+      setLoadingSubmit(false); // Stop loading
     }
   };
 
@@ -84,7 +90,6 @@ function Payments() {
 
   const columns: GridColDef[] = [
     { field: 'gym_id', headerName: 'Gym ID', flex: 1 },
-    { field: 'member_id', headerName: 'Member ID', flex: 1 },
     { field: 'amount_paid', headerName: 'Amount', flex: 1, valueFormatter: (params) => `$${params.value}` },
     { field: 'payment_date', headerName: 'Date', flex: 1 },
     { field: 'package_type', headerName: 'Package', flex: 1 },
@@ -122,16 +127,6 @@ function Payments() {
         <DialogTitle>Add New Payment</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Member ID"
-              name="member_id"
-              type="number"
-              value={formData.member_id || ''}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
-            />
             <TextField
               label="Gym ID"
               name="gym_id"
@@ -205,11 +200,11 @@ function Payments() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} color="secondary">
+          <Button onClick={() => setOpenDialog(false)} color="secondary" disabled={loadingSubmit}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} color="primary">
-            Save
+          <Button onClick={handleSubmit} color="primary" disabled={loadingSubmit}>
+            {loadingSubmit ? <CircularProgress size={24} /> : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -48,13 +48,21 @@ export const getMember = async (id: number): Promise<Member> => {
     return response.data;
   };
 
+// export const createMember = async (email: string | null, memberData: any) => {
+//     if (!email) throw new Error('No email provided');
+//     const response = await api.post('/api/members', memberData, {
+//       headers: { 'User-Email': email },
+//     });
+//     return response.data;
+//   };
 export const createMember = async (email: string | null, memberData: any) => {
-    if (!email) throw new Error('No email provided');
-    const response = await api.post('/api/members', memberData, {
-      headers: { 'User-Email': email },
-    });
-    return response.data;
-  };
+  if (!email) throw new Error('No email provided');
+  console.log('Sending member data:', memberData); // Add this log
+  const response = await api.post('/api/members', memberData, {
+    headers: { 'User-Email': email },
+  });
+  return response.data;
+};
 
 export const updateMember = async (id: number, memberData: Partial<Member>) => {
   const response = await api.put(`/members/${id}`, memberData); // Note: Backend needs to support PUT by ID
@@ -90,8 +98,18 @@ export const getPayment = async (id: number): Promise<Payment> => {
     return response.data;
   };
 
-export const createPayment = async (email: string | null, paymentData: any) => {
+  export const getMembersByGymId = async (email: string | null, gymId: string) => {
     if (!email) throw new Error('No email provided');
+    if (!gymId) throw new Error('No gym_id provided');
+    const response = await api.get(`/api/members/gym/${gymId}`, {
+      headers: { 'User-Email': email },
+    });
+    return response.data;
+  };
+
+  export const createPayment = async (email: string | null, paymentData: any) => {
+    if (!email) throw new Error('No email provided');
+    console.log('Sending payment data:', paymentData);
     const response = await api.post('/api/payments', paymentData, {
       headers: { 'User-Email': email },
     });
@@ -109,6 +127,7 @@ export const getExpenses = async (email: string | null) => {
 
   export const createExpense = async (email: string | null, expenseData: any) => {
     if (!email) throw new Error('No email provided');
+    console.log('Sending expense data:', expenseData);
     const response = await api.post('/api/expenses', expenseData, {
       headers: { 'User-Email': email },
     });
@@ -150,6 +169,7 @@ export interface Payment {
   payment_date: string;
   package_type: string;
   payment_method: string;
+  created_at: string;
 }
 
 export interface Expense {

@@ -473,10 +473,23 @@ app.get('/api/members/:id', async (req, res) => {
   }
 });
 
+// app.post('/api/members', async (req, res) => {
+//   console.log('Received member data:', req.body);
+//   const { data, error } = await supabase.from('members').insert([req.body]).select();
+//   if (error) {
+//     console.error('Supabase error:', error);
+//     return res.status(400).json({ error: error.message });
+//   }
+//   res.status(201).json(data);
+// });
 app.post('/api/members', async (req, res) => {
   const memberData = req.body;
+  console.log('Inserting member data:', memberData);
   const { data, error } = await supabase.from('members').insert([memberData]).select();
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    console.error('Supabase error:', error);
+    return res.status(400).json({ error: error.message });
+  }
   res.status(201).json(data);
 });
 
@@ -580,11 +593,34 @@ app.get('/api/payments/member/:memberId', async (req, res) => {
   }
 });
 
+// POST endpoint for adding a payment
 app.post('/api/payments', async (req, res) => {
   const paymentData = req.body;
+  console.log('Inserting payment data:', paymentData);
   const { data, error } = await supabase.from('payments').insert([paymentData]).select();
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    console.error('Supabase error:', error);
+    return res.status(400).json({ error: error.message });
+  }
   res.status(201).json(data);
+});
+
+app.get('/api/members/gym/:gymId', async (req, res) => {
+  try {
+    const { gymId } = req.params;
+    const { data, error } = await supabase
+      .from('members')
+      .select('id, first_name, last_name')
+      .eq('gym_id', gymId);
+    if (error) {
+      console.error('Error fetching members by gym_id:', error);
+      return res.status(400).json({ error: error.message });
+    }
+    res.json(data);
+  } catch (err) {
+    console.error('Members by gym_id fetch error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Expenses routes
@@ -602,10 +638,15 @@ app.get('/api/expenses', async (req, res) => {
   }
 });
 
+// POST endpoint for adding an expense
 app.post('/api/expenses', async (req, res) => {
   const expenseData = req.body;
+  console.log('Inserting expense data:', expenseData);
   const { data, error } = await supabase.from('expenses').insert([expenseData]).select();
-  if (error) return res.status(400).json({ error: error.message });
+  if (error) {
+    console.error('Supabase error:', error);
+    return res.status(400).json({ error: error.message });
+  }
   res.status(201).json(data);
 });
 

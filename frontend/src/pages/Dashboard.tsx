@@ -7,6 +7,16 @@ import { People as PeopleIcon, Payment as PaymentIcon, MoneyOff as MoneyOffIcon,
 import { getMembers, getPayments, getExpenses } from '../api/api';
 import { RootState } from '../store/index';
 import Members from './Members';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 // Use TypedUseSelectorHook to type the selector
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector;
@@ -58,6 +68,42 @@ function Dashboard() {
     };
     fetchData();
   }, [email, role]);
+
+  // Process Payments data: Aggregate total_amount by month
+  const paymentsByMonth = payments.reduce((acc, payment) => {
+    // Extract YYYY-MM from payment_date
+    const date = payment.payment_date.slice(0, 7); // e.g., "2025-05"
+    if (!acc[date]) {
+      acc[date] = 0;
+    }
+    acc[date] += payment.total_amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const paymentsChartData = Object.keys(paymentsByMonth)
+    .sort()
+    .map((date) => ({
+      date,
+      Income: paymentsByMonth[date],
+    }));
+
+  // Process Expenses data: Aggregate amount by month
+  const expensesByMonth = expenses.reduce((acc, expense) => {
+    // Extract YYYY-MM from expense_date
+    const date = expense.expense_date.slice(0, 7); // e.g., "2025-05"
+    if (!acc[date]) {
+      acc[date] = 0;
+    }
+    acc[date] += expense.amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const expensesChartData = Object.keys(expensesByMonth)
+    .sort()
+    .map((date) => ({
+      date,
+      Expense: expensesByMonth[date],
+    }));
 
   return (
     <Box sx={{ p: 3 }}>
@@ -157,7 +203,54 @@ function Dashboard() {
         </Grid>
         
       </Grid>
+
+      <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {/* Payments (Income) Chart */}
+        <Card sx={{ flex: 1, minWidth: 400 }}>
+          <CardContent>
+            <Typography variant="h6" mb={2}>
+              Income Over Time
+            </Typography>
+            <Box sx={{ height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={paymentsChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip formatter={(value: number) => `$${value}`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="Income" stroke="#8884d8" activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Expenses Chart */}
+        <Card sx={{ flex: 1, minWidth: 400 }}>
+          <CardContent>
+            <Typography variant="h6" mb={2}>
+              Expenses Over Time
+            </Typography>
+            <Box sx={{ height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={expensesChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis label={{ value: 'Amount ($)', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip formatter={(value: number) => `$${value}`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="Expense" stroke="#82ca9d" activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+      
     </Box>
+    
+    
   );
 }
 

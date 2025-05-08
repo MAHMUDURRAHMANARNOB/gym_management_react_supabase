@@ -7,7 +7,7 @@ import { useSelector, TypedUseSelectorHook } from 'react-redux';
 import { getExpenses, createExpense } from '../api/api';
 import { AxiosError } from 'axios';
 import { Expense } from '../api/api';
-import { RootState } from '../store/index'; // Updated import
+import { RootState } from '../store/index';
 
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector;
 
@@ -23,12 +23,13 @@ function Expenses() {
     description: '',
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true); // Add loading state
+  const [loading, setLoading] = useState(true);
+  const [loadingSubmit, setLoadingSubmit] = useState(false); // Add loading state for submission
 
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
-        setLoading(true); // Start loading
+        setLoading(true);
         const response = await getExpenses(email);
         setExpenses(response);
         setError('');
@@ -36,7 +37,7 @@ function Expenses() {
         const axiosError = err as AxiosError<{ message: string }>;
         setError(axiosError.response?.data?.message || 'Failed to fetch expenses');
       } finally {
-        setLoading(false); // Stop loading
+        setLoading(false);
       }
     };
     fetchExpenses();
@@ -49,6 +50,7 @@ function Expenses() {
 
   const handleSubmit = async () => {
     try {
+      setLoadingSubmit(true); // Start loading
       await createExpense(email, {
         category: formData.category,
         amount: parseFloat(formData.amount),
@@ -63,6 +65,8 @@ function Expenses() {
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
       setError(axiosError.response?.data?.message || 'Failed to add expense');
+    } finally {
+      setLoadingSubmit(false); // Stop loading
     }
   };
 
@@ -150,11 +154,11 @@ function Expenses() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} color="secondary">
+          <Button onClick={() => setOpenDialog(false)} color="secondary" disabled={loadingSubmit}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} color="primary">
-            Save
+          <Button onClick={handleSubmit} color="primary" disabled={loadingSubmit}>
+            {loadingSubmit ? <CircularProgress size={24} /> : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
