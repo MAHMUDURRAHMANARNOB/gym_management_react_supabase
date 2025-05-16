@@ -31,7 +31,7 @@ export const signup = async (email: string, password: string, role?: string) => 
   return response.data;
 };
 
-// Members
+// Get All Members
 export const getMembers = async (email: string | null) => {
     if (!email) throw new Error('No email provided');
     const response = await api.get('/api/members', {
@@ -41,20 +41,28 @@ export const getMembers = async (email: string | null) => {
   };
 
 // Members
-export const getMember = async (id: number): Promise<Member> => {
-    const response = await api.get(`/api/members/${id}`, {
-      headers: { 'User-Email': localStorage.getItem('email') }, // Use stored email
-    });
-    return response.data;
-  };
-
-// export const createMember = async (email: string | null, memberData: any) => {
-//     if (!email) throw new Error('No email provided');
-//     const response = await api.post('/api/members', memberData, {
-//       headers: { 'User-Email': email },
+// export const getMember = async (id: number): Promise<Member> => {
+//     const response = await api.get(`/api/members/${id}`, {
+//       headers: { 'User-Email': localStorage.getItem('email') }, // Use stored email
 //     });
+//     console.log (response);
 //     return response.data;
 //   };
+export const getMember = async (id: number): Promise<Member> => {
+    try {
+        const email = localStorage.getItem('email');
+        if (!email) throw new Error('No email found in localStorage');
+        const response = await api.get(`/api/members/${id}`, {
+            headers: { 'User-Email': email },
+        });
+        console.log('getMember response:', response.data); // Debug log
+        return response.data;
+    } catch (error) {
+        console.error('getMember error:', error);
+        throw error; // Let the caller handle the error
+    }
+};
+
 export const createMember = async (email: string | null, memberData: any) => {
   if (!email) throw new Error('No email provided');
   console.log('Sending member data:', memberData); // Add this log
@@ -78,43 +86,43 @@ export const deleteMember = async (id: number) => {
 export const getPayments = async (email: string | null) => {
     if (!email) throw new Error('No email provided');
     const response = await api.get('/api/payments', {
-      headers: { 'User-Email': email },
+        headers: { 'User-Email': email },
     });
     return response.data;
-  };
+};
 
 // Payments
 export const getPayment = async (id: number): Promise<Payment> => {
     const response = await api.get(`/api/payments/${id}`, {
-      headers: { 'User-Email': localStorage.getItem('email') },
+        headers: { 'User-Email': localStorage.getItem('email') },
     });
     return response.data;
-  };
+};
 
-  export const getPaymentsByMember = async (memberId: number): Promise<Payment[]> => {
+export const getPaymentsByMember = async (memberId: number): Promise<Payment[]> => {
     const response = await api.get(`/api/payments/member/${memberId}`, {
-      headers: { 'User-Email': localStorage.getItem('email') },
+        headers: { 'User-Email': localStorage.getItem('email') },
     });
     return response.data;
-  };
+};
 
-  export const getMembersByGymId = async (email: string | null, gymId: string) => {
+export const getMembersByGymId = async (email: string | null, gymId: string) => {
     if (!email) throw new Error('No email provided');
     if (!gymId) throw new Error('No gym_id provided');
     const response = await api.get(`/api/members/gym/${gymId}`, {
-      headers: { 'User-Email': email },
+        headers: { 'User-Email': email },
     });
     return response.data;
-  };
+};
 
-  export const createPayment = async (email: string | null, paymentData: any) => {
-    if (!email) throw new Error('No email provided');
-    console.log('Sending payment data:', paymentData);
-    const response = await api.post('/api/payments', paymentData, {
-      headers: { 'User-Email': email },
-    });
-    return response.data;
-  };
+export const createPayment = async (email: string | null, paymentData: any) => {
+if (!email) throw new Error('No email provided');
+console.log('Sending payment data:', paymentData);
+const response = await api.post('/api/payments', paymentData, {
+    headers: { 'User-Email': email },
+});
+return response.data;
+};
 
 // Expenses
 export const getExpenses = async (email: string | null) => {
@@ -123,18 +131,64 @@ export const getExpenses = async (email: string | null) => {
       headers: { 'User-Email': email },
     });
     return response.data;
-  };
+};
 
-  export const createExpense = async (email: string | null, expenseData: any) => {
-    if (!email) throw new Error('No email provided');
-    console.log('Sending expense data:', expenseData);
-    const response = await api.post('/api/expenses', expenseData, {
-      headers: { 'User-Email': email },
-    });
-    return response.data;
-  };
+export const createExpense = async (email: string | null, expenseData: any) => {
+if (!email) throw new Error('No email provided');
+console.log('Sending expense data:', expenseData);
+const response = await api.post('/api/expenses', expenseData, {
+    headers: { 'User-Email': email },
+});
+return response.data;
+};
 
-  
+// Income
+export const getIncome = async (email: string | null) => {
+  if (!email) throw new Error('No email provided');
+  const response = await api.get('/api/income', {
+    headers: { 'User-Email': email },
+  });
+  return response.data;
+};
+
+// Supplements Inventory
+export const getSupplementsInventory = async (email: string | null) => {
+  if (!email) throw new Error('No email provided');
+  const response = await api.get('/api/supplements_inventory', {
+    headers: { 'User-Email': email },
+  });
+  return response.data;
+};
+
+export const createSupplementInventory = async (email: string | null, inventoryData: any) => {
+  if (!email) throw new Error('No email provided');
+  console.log('Sending supplement inventory data:', inventoryData);
+  const response = await api.post('/api/supplements_inventory', inventoryData, {
+    headers: { 'User-Email': email },
+  });
+  return response.data;
+};
+
+// Supplement Sales
+export const getSupplementSales = async (email: string | null) => {
+  if (!email) throw new Error('No email provided');
+  const response = await api.get('/api/supplement_sales', {
+    headers: { 'User-Email': email },
+  });
+  return response.data;
+};
+
+export const createSupplementSale = async (email: string | null, saleData: any) => {
+  if (!email) throw new Error('No email provided');
+  console.log('Sending supplement sale data:', saleData);
+  const response = await api.post('/api/supplement_sales', saleData, {
+    headers: { 'User-Email': email },
+  });
+  return response.data;
+};
+
+
+
 
 // Interfaces
 export interface Member {
@@ -178,4 +232,36 @@ export interface Expense {
   amount: number;
   expense_date: string;
   description: string;
+}
+
+export interface IncomeInterface {
+  id: number;
+  source_type: string;
+  source_id: number;
+  amount: number;
+  income_date: string;
+  description: string;
+  created_at: string;
+}
+
+export interface SupplementInventory {
+  id: number;
+  name: string;
+  brand: string;
+  quantity: number;
+  unit_price: number;
+  total_value: number;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplementSale {
+  id: number;
+  member_id: number;
+  supplement_id: number;
+  quantity_sold: number;
+  sale_price: number;
+  sale_date: string;
+  created_at: string;
 }

@@ -1,15 +1,35 @@
-// src/pages/Payments.tsx
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Select, InputLabel, FormControl, CircularProgress } from '@mui/material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import AddIcon from '@mui/icons-material/Add';
-import { SelectChangeEvent } from '@mui/material/Select';
 import { useSelector, TypedUseSelectorHook } from 'react-redux';
-import { getPayments, createPayment } from '../api/api';
+import { getPayments, createPayment, getMembersByGymId } from '../api/api';
 import { AxiosError } from 'axios';
-import { Payment, } from '../api/api';
+import { Payment, Member } from '../api/api';
 import { RootState } from '../store/index';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector;
 
@@ -20,16 +40,42 @@ function Payments() {
   const [filterDate, setFilterDate] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [formData, setFormData] = useState<Partial<Payment>>({
+    member_id: 0,
     gym_id: '',
     total_amount: 0,
     amount_paid: 0,
-    payment_date: '',
+    payment_date: new Date().toISOString().split('T')[0],
     package_type: 'Monthly',
     payment_method: 'Cash',
   });
+  const [members, setMembers] = useState<Member[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [loadingSubmit, setLoadingSubmit] = useState(false); // Add loading state for submission
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!formData.gym_id || formData.gym_id.trim() === '') {
+        setMembers([]);
+        setFormData((prev) => ({ ...prev, member_id: 0 }));
+        return;
+      }
+      try {
+        const response = await getMembersByGymId(email, formData.gym_id);
+        setMembers(response);
+        setFormData((prev) => ({
+          ...prev,
+          member_id: response.length > 0 ? response[0].id : 0,
+        }));
+      } catch (err) {
+        const axiosError = err as AxiosError<{ message: string }>;
+        setError(axiosError.response?.data?.message || 'Failed to fetch members');
+        setMembers([]);
+        setFormData((prev) => ({ ...prev, member_id: 0 }));
+      }
+    };
+    fetchMembers();
+  }, [formData.gym_id, email]);
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -48,39 +94,83 @@ function Payments() {
     fetchPayments();
   }, [email]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'member_id' || name === 'total_amount' || name === 'amount_paid'
-      ? Number(value)
-      : name === 'is_fully_paid'
-      ? value === 'true'
-      : value,
+      [name]:
+        name === 'member_id' || name === 'total_amount' || name === 'amount_paid'
+          ? Number(value)
+          : value,
+    }));
+  };
+
+  const handleSelectChange = (name: string, value: string | number) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === 'member_id' || name === 'total_amount' || name === 'amount_paid'
+          ? Number(value)
+          : value,
     }));
   };
 
   const handleSubmit = async () => {
+    const requiredFields = [
+      'member_id',
+      'gym_id',
+      'total_amount',
+      'amount_paid',
+      'payment_date',
+      'package_type',
+      'payment_method',
+    ];
+    const missingFields = requiredFields.filter((field) => {
+      const value = formData[field as keyof Partial<Payment>];
+      return (
+        !value ||
+        (typeof value === 'string' && value.trim() === '') ||
+        (typeof value === 'number' && (isNaN(value) || value === 0))
+      );
+    });
+    if (missingFields.length > 0) {
+      setError(`Missing required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+
+    const normalizedData = {
+      member_id: Number(formData.member_id),
+      gym_id: formData.gym_id?.trim(),
+      total_amount: Number(formData.total_amount),
+      amount_paid: Number(formData.amount_paid),
+      is_fully_paid: Number(formData.total_amount) === Number(formData.amount_paid),
+      payment_date: formData.payment_date?.trim(),
+      package_type: formData.package_type?.trim(),
+      payment_method: formData.payment_method?.trim(),
+    };
+
     try {
-      setLoadingSubmit(true); // Start loading
-      await createPayment(email, formData as Payment);
+      setLoadingSubmit(true);
+      await createPayment(email, normalizedData as Payment);
       const response = await getPayments(email);
       setPayments(response);
       setFormData({
+        member_id: 0,
         gym_id: '',
         total_amount: 0,
         amount_paid: 0,
-        payment_date: '',
+        payment_date: new Date().toISOString().split('T')[0],
         package_type: 'Monthly',
         payment_method: 'Cash',
       });
+      setMembers([]);
       setOpenDialog(false);
       setError('');
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
       setError(axiosError.response?.data?.message || 'Failed to add payment');
     } finally {
-      setLoadingSubmit(false); // Stop loading
+      setLoadingSubmit(false);
     }
   };
 
@@ -88,146 +178,242 @@ function Payments() {
     ? payments.filter((payment) => payment.payment_date.includes(filterDate))
     : payments;
 
-  const columns: GridColDef[] = [
-    { field: 'gym_id', headerName: 'Gym ID', flex: 1 },
-    { field: 'amount_paid', headerName: 'Amount', flex: 1, valueFormatter: (params) => `$${params.value}` },
-    { field: 'payment_date', headerName: 'Date', flex: 1 },
-    { field: 'package_type', headerName: 'Package', flex: 1 },
-    { field: 'payment_method', headerName: 'Method', flex: 1 },
-  ];
-
   return (
-    <Box sx={{ padding: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Payments</Typography>
+    <div className="p-6 bg-white min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-primary">Payments</h1>
         <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
           onClick={() => setOpenDialog(true)}
+          className="bg-primary hover:bg-primaryDark flex items-center"
         >
+          <svg
+            className="w-4 h-4 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
           Add Payment
         </Button>
-      </Box>
+      </div>
 
-      {error && <Typography color="error" mb={2}>{error}</Typography>}
+      {error && <p className="text-red-500 bg-red-50 p-2 rounded mb-4">{error}</p>}
 
-      <Box mb={3}>
-        <TextField
-          label="Filter by Date (YYYY-MM)"
+      <div className="mb-6">
+        <Input
+          placeholder="Filter by Date (YYYY-MM)"
           value={filterDate}
           onChange={(e) => setFilterDate(e.target.value)}
-          placeholder="YYYY-MM"
-          fullWidth
-          InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
+          className="border-gray-300 focus:border-primary focus:ring-primary"
         />
-      </Box>
+      </div>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Add New Payment</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Gym ID"
-              name="gym_id"
-              value={formData.gym_id || ''}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
-            />
-            <TextField
-              label="Total Amount"
-              name="total_amount"
-              type="number"
-              value={formData.total_amount || ''}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
-            />
-            <TextField
-              label="Amount Paid"
-              name="amount_paid"
-              type="number"
-              value={formData.amount_paid || ''}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              InputLabelProps={{ sx: { color: '#800000', '&.Mui-focused': { color: '#800000' } } }}
-            />
-            <TextField
-              label="Date"
-              name="payment_date"
-              type="date"
-              value={formData.payment_date || ''}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              InputLabelProps={{ shrink: true }}
-            />
-            <FormControl fullWidth>
-              <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' } }}>
-                Package Type
-              </InputLabel>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="bg-white rounded-lg shadow-lg">
+          <DialogHeader>
+            <DialogTitle className="text-primary">Add New Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Gym ID</label>
+              <Input
+                name="gym_id"
+                value={formData.gym_id || ''}
+                onChange={handleInputChange}
+                className="border-gray-300 focus:border-primary focus:ring-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Member</label>
               <Select
-                name="package_type"
+                value={formData.member_id?.toString() || (members.length > 0 ? members[0].id.toString() : '0')}
+                onValueChange={(value) => handleSelectChange('member_id', value)}
+                disabled={members.length === 0}
+              >
+                <SelectTrigger className="border-gray-300 focus:border-primary focus:ring-primary">
+                  <SelectValue placeholder="Select a member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id.toString()}>
+                      {`${member.first_name} ${member.last_name} (ID: ${member.id})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {members.length === 0 && (
+                <p className="text-red-500 text-sm mt-1">No members available for this gym</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
+              <Input
+                name="total_amount"
+                type="number"
+                value={formData.total_amount || 0}
+                onChange={handleInputChange}
+                className="border-gray-300 focus:border-primary focus:ring-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount Paid</label>
+              <Input
+                name="amount_paid"
+                type="number"
+                value={formData.amount_paid || 0}
+                onChange={handleInputChange}
+                className="border-gray-300 focus:border-primary focus:ring-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <Input
+                name="payment_date"
+                type="date"
+                value={formData.payment_date || new Date().toISOString().split('T')[0]}
+                onChange={handleInputChange}
+                className="border-gray-300 focus:border-primary focus:ring-primary"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Package Type</label>
+              <Select
                 value={formData.package_type || 'Monthly'}
-                onChange={handleInputChange}
-                label="Package Type"
+                onValueChange={(value) => handleSelectChange('package_type', value)}
               >
-                <MenuItem value="Monthly">Monthly</MenuItem>
-                <MenuItem value="3 Months">3 Months</MenuItem>
-                <MenuItem value="6 Months">6 Months</MenuItem>
-                <MenuItem value="Yearly">Yearly</MenuItem>
+                <SelectTrigger className="border-gray-300 focus:border-primary focus:ring-primary">
+                  <SelectValue placeholder="Select package type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Monthly">Monthly</SelectItem>
+                  <SelectItem value="3 Months">3 Months</SelectItem>
+                  <SelectItem value="6 Months">6 Months</SelectItem>
+                  <SelectItem value="Yearly">Yearly</SelectItem>
+                </SelectContent>
               </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel sx={{ color: '#800000', '&.Mui-focused': { color: '#800000' } }}>
-                Payment Method
-              </InputLabel>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
               <Select
-                name="payment_method"
                 value={formData.payment_method || 'Cash'}
-                onChange={handleInputChange}
-                label="Payment Method"
+                onValueChange={(value) => handleSelectChange('payment_method', value)}
               >
-                <MenuItem value="Cash">Cash</MenuItem>
-                <MenuItem value="Card">Card</MenuItem>
-                <MenuItem value="Online">Online</MenuItem>
+                <SelectTrigger className="border-gray-300 focus:border-primary focus:ring-primary">
+                  <SelectValue placeholder="Select payment method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Card">Card</SelectItem>
+                  <SelectItem value="Online">Online</SelectItem>
+                </SelectContent>
               </Select>
-            </FormControl>
-          </Box>
+            </div>
+          </div>
+          <DialogFooter className="mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setOpenDialog(false)}
+              disabled={loadingSubmit}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              className="bg-primary hover:bg-primaryDark"
+              disabled={loadingSubmit}
+            >
+              {loadingSubmit ? (
+                <svg
+                  className="animate-spin h-5 w-5 mr-2"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              ) : null}
+              Save
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} color="secondary" disabled={loadingSubmit}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} color="primary" disabled={loadingSubmit}>
-            {loadingSubmit ? <CircularProgress size={24} /> : 'Save'}
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-          <CircularProgress />
-        </Box>
+        <div className="flex justify-center items-center h-[400px]">
+          <svg
+            className="animate-spin h-8 w-8 text-primary"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+            />
+            <path
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+            />
+          </svg>
+        </div>
       ) : (
-        <Box sx={{ height: 400, width: '100%' }}>
-          <DataGrid
-            rows={filteredPayments}
-            columns={columns}
-            pageSizeOptions={[5, 10, 20]}
-            onRowClick={(params) => navigate(`/payment-details/${params.id}`)}
-            sx={{
-              '& .MuiDataGrid-columnHeaders': { backgroundColor: '#1A1A1A', color: '#FFFFFF' },
-              '& .MuiDataGrid-row': { '&:hover': { backgroundColor: '#f5f5f5' }, cursor: 'pointer' },
-            }}
-          />
-        </Box>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-primary font-bold">Gym ID</TableHead>
+              <TableHead className="text-primary font-bold">Amount</TableHead>
+              <TableHead className="text-primary font-bold">Date</TableHead>
+              <TableHead className="text-primary font-bold">Package</TableHead>
+              <TableHead className="text-primary font-bold">Method</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredPayments.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-gray-500">
+                  No payments found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredPayments.map((payment) => (
+                <TableRow
+                  key={payment.id}
+                  onClick={() => navigate(`/payment-details/${payment.id}`)}
+                  className="cursor-pointer hover:bg-gray-100"
+                >
+                  <TableCell>{payment.gym_id}</TableCell>
+                  <TableCell>BDT {payment.amount_paid}</TableCell>
+                  <TableCell>{payment.payment_date}</TableCell>
+                  <TableCell>{payment.package_type}</TableCell>
+                  <TableCell>{payment.payment_method}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       )}
-    </Box>
+    </div>
   );
 }
 
