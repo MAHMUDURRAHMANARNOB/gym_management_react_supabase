@@ -71,6 +71,8 @@ app.use('/api/expenses', checkAdminRole);
 app.use('/api/income', checkAdminRole);
 app.use('/api/supplements_inventory', checkAdminRole);
 app.use('/api/supplement_sales', checkAdminRole);
+app.use('/api/assets', checkAdminRole);
+
 
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
@@ -516,6 +518,114 @@ app.post('/api/expenses', async (req, res) => {
     return res.status(400).json({ error: error.message });
     }
     res.status(201).json(data);
+});
+
+// Assets
+app.get('/api/assets', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('assets').select('*');
+    if (error) {
+      console.error('Error fetching assets:', error);
+      return res.status(400).json({ error: error.message });
+    }
+    res.json(data);
+  } catch (err) {
+    console.error('Assets route error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/assets/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('assets')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) {
+      console.error('Error fetching asset:', error);
+      return res.status(400).json({ error: error.message });
+    }
+    if (!data) {
+      return res.status(404).json({ error: 'Asset not found' });
+    }
+    res.json(data);
+  } catch (err) {
+    console.error('Asset fetch error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/assets', checkAdminRole, async (req, res) => {
+  try {
+    const { email, name, category, purchase_date, purchase_value, current_value, condition, location, quantity } = req.body;
+    const { data, error } = await supabase
+      .from('assets')
+      .insert([{ user_email: email, name, category, purchase_date, purchase_value, current_value, condition, location, quantity }])
+      .select()
+      .single();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    console.error('Error creating asset:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/assets/:id', checkAdminRole, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, name, category, purchase_date, purchase_value, current_value, condition, location, quantity } = req.body;
+    const { data, error } = await supabase
+      .from('assets')
+      .update({ name, category, purchase_date, purchase_value, current_value, condition, location, quantity })
+      .eq('id', id)
+      .eq('user_email', email)
+      .select()
+      .single();
+    if (error) return res.status(400).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: 'Asset not found' });
+    res.json(data);
+  } catch (err) {
+    console.error('Error updating asset:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/assets/:id', checkAdminRole, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.query;
+    const { data, error } = await supabase
+      .from('assets')
+      .delete()
+      .eq('id', id)
+      .eq('user_email', email)
+      .select()
+      .single();
+    if (error) return res.status(400).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: 'Asset not found' });
+    res.json(data);
+  } catch (err) {
+    console.error('Error deleting asset:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/assets/total-worth', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('assets').select('current_value');
+    if (error) {
+      console.error('Error fetching assets for total worth:', error);
+      return res.status(400).json({ error: error.message });
+    }
+    const totalWorth = data.reduce((sum, asset) => sum + parseFloat(asset.current_value), 0).toFixed(2);
+    res.json({ totalWorth });
+  } catch (err) {
+    console.error('Total worth calculation error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 app.listen(port, () => {

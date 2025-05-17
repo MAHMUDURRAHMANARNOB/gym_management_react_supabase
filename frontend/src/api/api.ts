@@ -1,6 +1,6 @@
 // src/api/api.ts
 import axios from 'axios';
-import { loginSuccess } from '../store/authSlice';
+// import { loginSuccess } from '../store/authSlice';
 const api = axios.create({
   baseURL: 'http://localhost:3000',
   headers: {
@@ -20,10 +20,26 @@ const api = axios.create({
 
 
 // Authentication
+// export const login = async (email: string, password: string) => {
+//     const response = await api.post('/api/auth/login', { email, password });
+//     return response.data;
+//   };
 export const login = async (email: string, password: string) => {
-    const response = await api.post('/api/auth/login', { email, password });
-    return response.data;
-  };
+  const response = await api.post('/api/auth/login', { email, password });
+  return response.data;
+};
+
+export const checkSession = async () => {
+  const session = localStorage.getItem('session');
+  if (!session) return null;
+  try {
+    const response = await api.post('/api/auth/check-session', { session: JSON.parse(session) });
+    return response.data.user;
+  } catch (error) {
+    console.error('Session check error:', error);
+    return null;
+  }
+};
 
 
 export const signup = async (email: string, password: string, role?: string) => {
@@ -187,6 +203,72 @@ export const createSupplementSale = async (email: string | null, saleData: any) 
   return response.data;
 };
 
+// Assets
+export const getAssets = async (email: string | null) => {
+  const response = await api.get('/api/assets', { params: { email } });
+  return response.data;
+};
+
+export const getAsset = async (id: string, email: string | null): Promise<Asset> => {
+  if (!email) throw new Error('No email provided');
+  const response = await api.get(`/api/assets/${id}`, {
+    headers: { 'User-Email': email },
+  });
+  return response.data;
+};
+
+// export const createAsset = async (email: string | null, assetData: Partial<Asset>) => {
+//   if (!email) throw new Error('No email provided');
+//   console.log('Sending asset data:', assetData);
+//   const response = await api.post('/api/assets', assetData, {
+//     headers: { 'User-Email': email },
+//   });
+//   return response.data;
+// };
+
+// export const updateAsset = async (id: string, email: string | null, assetData: Partial<Asset>) => {
+//   if (!email) throw new Error('No email provided');
+//   console.log('Updating asset data:', assetData);
+//   const response = await api.put(`/api/assets/${id}`, assetData, {
+//     headers: { 'User-Email': email },
+//   });
+//   return response.data;
+// };
+// export const deleteAsset = async (id: string, email: string | null) => {
+//   if (!email) throw new Error('No email provided');
+//   const response = await api.delete(`/api/assets/${id}`, {
+//     headers: { 'User-Email': email },
+//   });
+//   return response.data;
+// };
+
+// export const getTotalAssetWorth = async (email: string | null): Promise<{ totalWorth: string }> => {
+//   if (!email) throw new Error('No email provided');
+//   const response = await api.get('/api/assets/total-worth', {
+//     headers: { 'User-Email': email },
+//   });
+//   return response.data;
+// };
+export const createAsset = async (email: string | null, asset: Partial<Asset>) => {
+  const response = await api.post('/api/assets', { ...asset, email });
+  return response.data;
+};
+
+export const updateAsset = async (id: string, email: string | null, asset: Partial<Asset>) => {
+  const response = await api.put(`/api/assets/${id}`, { ...asset, email });
+  return response.data;
+};
+
+export const deleteAsset = async (id: string, email: string | null) => {
+  const response = await api.delete(`/api/assets/${id}`, { params: { email } });
+  return response.data;
+};
+
+export const getTotalAssetWorth = async (email: string | null) => {
+  const response = await api.get('/api/assets/total-worth', { params: { email } });
+  return response.data;
+};
+
 
 
 
@@ -264,4 +346,16 @@ export interface SupplementSale {
   sale_price: number;
   sale_date: string;
   created_at: string;
+}
+
+export interface Asset {
+  id: string;
+  name: string;
+  category: string;
+  purchase_date: string;
+  purchase_value: number;
+  current_value: number;
+  condition: string;
+  location: string;
+  quantity: number;
 }
