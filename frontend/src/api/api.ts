@@ -205,68 +205,49 @@ export const createSupplementSale = async (email: string | null, saleData: any) 
 
 // Assets
 export const getAssets = async (email: string | null) => {
-  const response = await api.get('/api/assets', { params: { email } });
-  return response.data;
+    if (!email) throw new Error('No email provided');
+    const response = await api.get('/api/assets', {
+        headers: { 'User-Email': email },
+    });
+    return response.data;
 };
 
-export const getAsset = async (id: string, email: string | null): Promise<Asset> => {
-  if (!email) throw new Error('No email provided');
-  const response = await api.get(`/api/assets/${id}`, {
-    headers: { 'User-Email': email },
-  });
-  return response.data;
+export const getAsset = async (id: number): Promise<Asset> => {
+    try {
+        const email = localStorage.getItem('email');
+        if (!email) throw new Error('No email found in localStorage');
+        const response = await api.get(`/api/assets/${id}`, {
+            headers: { 'User-Email': email },
+        });
+        console.log('getAsset response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('getAsset error:', error);
+        throw error;
+    }
 };
 
-// export const createAsset = async (email: string | null, assetData: Partial<Asset>) => {
-//   if (!email) throw new Error('No email provided');
-//   console.log('Sending asset data:', assetData);
-//   const response = await api.post('/api/assets', assetData, {
-//     headers: { 'User-Email': email },
-//   });
-//   return response.data;
-// };
-
-// export const updateAsset = async (id: string, email: string | null, assetData: Partial<Asset>) => {
-//   if (!email) throw new Error('No email provided');
-//   console.log('Updating asset data:', assetData);
-//   const response = await api.put(`/api/assets/${id}`, assetData, {
-//     headers: { 'User-Email': email },
-//   });
-//   return response.data;
-// };
-// export const deleteAsset = async (id: string, email: string | null) => {
-//   if (!email) throw new Error('No email provided');
-//   const response = await api.delete(`/api/assets/${id}`, {
-//     headers: { 'User-Email': email },
-//   });
-//   return response.data;
-// };
-
-// export const getTotalAssetWorth = async (email: string | null): Promise<{ totalWorth: string }> => {
-//   if (!email) throw new Error('No email provided');
-//   const response = await api.get('/api/assets/total-worth', {
-//     headers: { 'User-Email': email },
-//   });
-//   return response.data;
-// };
-export const createAsset = async (email: string | null, asset: Partial<Asset>) => {
-  const response = await api.post('/api/assets', { ...asset, email });
-  return response.data;
+export const createAsset = async (email: string | null, assetData: any) => {
+    if (!email) throw new Error('No email provided');
+    console.log('Sending asset data:', assetData);
+    const response = await api.post('/api/assets', assetData, {
+        headers: { 'User-Email': email },
+    });
+    return response.data;
 };
 
-export const updateAsset = async (id: string, email: string | null, asset: Partial<Asset>) => {
-  const response = await api.put(`/api/assets/${id}`, { ...asset, email });
-  return response.data;
+export const updateAsset = async (id: number, assetData: Partial<Asset>) => {
+    const response = await api.put(`/api/assets/${id}`, assetData, {
+        headers: { 'User-Email': localStorage.getItem('email') },
+    });
+    return response.data;
 };
 
-export const deleteAsset = async (id: string, email: string | null) => {
-  const response = await api.delete(`/api/assets/${id}`, { params: { email } });
-  return response.data;
-};
-
-export const getTotalAssetWorth = async (email: string | null) => {
-  const response = await api.get('/api/assets/total-worth', { params: { email } });
-  return response.data;
+export const deleteAsset = async (id: number) => {
+    const response = await api.delete(`/api/assets/${id}`, {
+        headers: { 'User-Email': localStorage.getItem('email') },
+    });
+    return response.data;
 };
 
 
@@ -349,13 +330,14 @@ export interface SupplementSale {
 }
 
 export interface Asset {
-  id: string;
-  name: string;
-  category: string;
-  purchase_date: string;
-  purchase_value: number;
-  current_value: number;
-  condition: string;
-  location: string;
-  quantity: number;
+    id: number;
+    gym_id: string;
+    name: string;
+    value: number;
+    quantity: number;
+    condition: string;
+    total_valuation: number;
+    description?: string;
+    created_at: string;
+    updated_at: string;
 }

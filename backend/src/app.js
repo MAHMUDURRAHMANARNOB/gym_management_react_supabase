@@ -196,15 +196,6 @@ app.get('/api/members/:id', async (req, res) => {
     }
 });
 
-// app.post('/api/members', async (req, res) => {
-//   console.log('Received member data:', req.body);
-//   const { data, error } = await supabase.from('members').insert([req.body]).select();
-//   if (error) {
-//     console.error('Supabase error:', error);
-//     return res.status(400).json({ error: error.message });
-//   }
-//   res.status(201).json(data);
-// });
 app.post('/api/members', async (req, res) => {
     const memberData = req.body;
     console.log('Inserting member data:', memberData);
@@ -520,113 +511,111 @@ app.post('/api/expenses', async (req, res) => {
     res.status(201).json(data);
 });
 
-// Assets
+// Assets routes
 app.get('/api/assets', async (req, res) => {
-  try {
-    const { data, error } = await supabase.from('assets').select('*');
-    if (error) {
-      console.error('Error fetching assets:', error);
-      return res.status(400).json({ error: error.message });
+    try {
+        const { data, error } = await supabase.from('assets').select('*');
+        if (error) {
+            console.error('Error fetching assets:', error);
+            return res.status(400).json({ error: error.message });
+        }
+        res.json(data);
+    } catch (err) {
+        console.error('Assets route error:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    res.json(data);
-  } catch (err) {
-    console.error('Assets route error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
 app.get('/api/assets/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { data, error } = await supabase
-      .from('assets')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (error) {
-      console.error('Error fetching asset:', error);
-      return res.status(400).json({ error: error.message });
+    try {
+        const { id } = req.params;
+        const { data, error } = await supabase
+            .from('assets')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) {
+            console.error('Error fetching asset:', error);
+            return res.status(400).json({ error: error.message });
+        }
+        if (!data) {
+            return res.status(404).json({ error: 'Asset not found' });
+        }
+        res.json(data);
+    } catch (err) {
+        console.error('Asset fetch error:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    if (!data) {
-      return res.status(404).json({ error: 'Asset not found' });
+});
+
+app.post('/api/assets', async (req, res) => {
+    try {
+        const assetData = req.body;
+        console.log('Inserting asset data:', assetData);
+        // Calculate total_valuation
+        assetData.total_valuation = (assetData.value * assetData.quantity).toFixed(2);
+        const { data, error } = await supabase.from('assets').insert([assetData]).select();
+        if (error) {
+            console.error('Supabase error:', error);
+            return res.status(400).json({ error: error.message });
+        }
+        res.status(201).json(data);
+    } catch (err) {
+        console.error('Asset creation error:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    res.json(data);
-  } catch (err) {
-    console.error('Asset fetch error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
-app.post('/api/assets', checkAdminRole, async (req, res) => {
-  try {
-    const { email, name, category, purchase_date, purchase_value, current_value, condition, location, quantity } = req.body;
-    const { data, error } = await supabase
-      .from('assets')
-      .insert([{ user_email: email, name, category, purchase_date, purchase_value, current_value, condition, location, quantity }])
-      .select()
-      .single();
-    if (error) return res.status(400).json({ error: error.message });
-    res.json(data);
-  } catch (err) {
-    console.error('Error creating asset:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.put('/api/assets/:id', checkAdminRole, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { email, name, category, purchase_date, purchase_value, current_value, condition, location, quantity } = req.body;
-    const { data, error } = await supabase
-      .from('assets')
-      .update({ name, category, purchase_date, purchase_value, current_value, condition, location, quantity })
-      .eq('id', id)
-      .eq('user_email', email)
-      .select()
-      .single();
-    if (error) return res.status(400).json({ error: error.message });
-    if (!data) return res.status(404).json({ error: 'Asset not found' });
-    res.json(data);
-  } catch (err) {
-    console.error('Error updating asset:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.delete('/api/assets/:id', checkAdminRole, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { email } = req.query;
-    const { data, error } = await supabase
-      .from('assets')
-      .delete()
-      .eq('id', id)
-      .eq('user_email', email)
-      .select()
-      .single();
-    if (error) return res.status(400).json({ error: error.message });
-    if (!data) return res.status(404).json({ error: 'Asset not found' });
-    res.json(data);
-  } catch (err) {
-    console.error('Error deleting asset:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/api/assets/total-worth', async (req, res) => {
-  try {
-    const { data, error } = await supabase.from('assets').select('current_value');
-    if (error) {
-      console.error('Error fetching assets for total worth:', error);
-      return res.status(400).json({ error: error.message });
+app.put('/api/assets/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const assetData = req.body;
+        console.log('Updating asset data:', assetData);
+        // Recalculate total_valuation if value or quantity is updated
+        if (assetData.value && assetData.quantity) {
+            assetData.total_valuation = (assetData.value * assetData.quantity).toFixed(2);
+        }
+        const { data, error } = await supabase
+            .from('assets')
+            .update(assetData)
+            .eq('id', id)
+            .select();
+        if (error) {
+            console.error('Error updating asset:', error);
+            return res.status(400).json({ error: error.message });
+        }
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: 'Asset not found' });
+        }
+        res.json(data);
+    } catch(err) {
+        console.error('Asset update error:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    const totalWorth = data.reduce((sum, asset) => sum + parseFloat(asset.current_value), 0).toFixed(2);
-    res.json({ totalWorth });
-  } catch (err) {
-    console.error('Total worth calculation error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
+
+app.delete('/api/assets/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { data, error } = await supabase
+            .from('assets')
+            .delete()
+            .eq('id', id)
+            .select();
+        if (error) {
+            console.error('Error deleting asset:', error);
+            return res.status(400).json({ error: error.message });
+        }
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: 'Asset not found' });
+        }
+        res.json({ message: 'Asset deleted', data });
+    } catch (err) {
+        console.error('Asset delete error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
