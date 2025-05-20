@@ -42,7 +42,7 @@ const Landing: React.FC = () => {
   };
 
   const handleWhatsApp = () => {
-    const phoneNumber = '+8801746383096'; // Replace with your WhatsApp number (e.g., +1-234-567-8900)
+    const phoneNumber = '+8801686006304'; // Replace with your WhatsApp number (e.g., +1-234-567-8900)
     const message = `Name: ${formData.name}\nEmail: ${formData.email}\nMessage: ${formData.message}`;
     window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };

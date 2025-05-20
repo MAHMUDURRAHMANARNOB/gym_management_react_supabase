@@ -164,41 +164,41 @@ function Members() {
     setOpenEditDialog(true);
   };
 
-  const handleEditSubmit = async () => {
-    if (editingMemberId === null) return;
-    try {
-      setLoadingEdit(true);
-      await updateMember(editingMemberId, formData as Member);
-      const response = await getMembers(email);
-      setMembers(response);
-      setFormData({
-        gym_id: '',
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        package_type: 'Monthly',
-        status: 'Active',
-        height: '',
-        weight: '',
-        chest: '',
-        waist: '',
-        hips: '',
-        blood_group: '',
-        bmi: 0,
-        goal: 'General Fitness',
-        gender: '',
-      });
-      setEditingMemberId(null);
-      setOpenEditDialog(false);
-      setError('');
-    } catch (err) {
-      const axiosError = err as AxiosError<{ message: string }>;
-      setError(axiosError.response?.data?.message || 'Failed to update member');
-    } finally {
-      setLoadingEdit(false);
-    }
-  };
+//   const handleEditSubmit = async () => {
+//     if (editingMemberId === null) return;
+//     try {
+//       setLoadingEdit(true);
+//       await updateMember(editingMemberId, formData as Member);
+//       const response = await getMembers(email);
+//       setMembers(response);
+//       setFormData({
+//         gym_id: '',
+//         first_name: '',
+//         last_name: '',
+//         email: '',
+//         phone: '',
+//         package_type: 'Monthly',
+//         status: 'Active',
+//         height: '',
+//         weight: '',
+//         chest: '',
+//         waist: '',
+//         hips: '',
+//         blood_group: '',
+//         bmi: 0,
+//         goal: 'General Fitness',
+//         gender: '',
+//       });
+//       setEditingMemberId(null);
+//       setOpenEditDialog(false);
+//       setError('');
+//     } catch (err) {
+//       const axiosError = err as AxiosError<{ message: string }>;
+//       setError(axiosError.response?.data?.message || 'Failed to update member');
+//     } finally {
+//       setLoadingEdit(false);
+//     }
+//   };
 
   const handleDelete = async (id: number) => {
     try {

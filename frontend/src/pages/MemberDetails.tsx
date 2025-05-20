@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector, TypedUseSelectorHook } from 'react-redux';
 import { AxiosError } from 'axios';
 import { getMember, getPaymentsByMember, updateMember } from '../api/api';
 import { Member, Payment } from '../api/api';
@@ -9,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -28,9 +30,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { RootState } from '../store/index';
+import Swal from 'sweetalert2';
+
+
+const useTypedSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 function MemberDetails() {
   const { id } = useParams<{ id: string }>();
+  const { email } = useTypedSelector((state) => state.auth);
   const navigate = useNavigate();
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [member, setMember] = useState<Member | null>(null);
@@ -95,15 +103,53 @@ function MemberDetails() {
 
   const handleEditSubmit = async () => {
     if (!formData) return;
+    if (!email) {
+    setError('User email is required. Please log in.');
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'User email is required. Please log in.',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    });
+    return;
+  }
     try {
-      await updateMember(formData.id, formData);
+      const userEmail = email; // Example; adjust based on your auth setup
+    await updateMember(formData.id, formData, userEmail);
       setMember(formData);
       setFormData(null);
       setOpenEditDialog(false);
       setError('');
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: 'Member updated successfully!',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
     } catch (err) {
       const axiosError = err as AxiosError<{ message: string }>;
-      setError(axiosError.response?.data?.message || 'Failed to update member');
+      const errorMessage =
+        axiosError.response?.data?.message ||
+        'Failed to update member. Please try again.';
+      setError(errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
     }
   };
 
@@ -207,6 +253,7 @@ function MemberDetails() {
         <DialogContent className="bg-white rounded-lg shadow-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-primary">Edit Member Details</DialogTitle>
+            <DialogDescription>Update the member's personal and fitness information below.</DialogDescription>
           </DialogHeader>
           {formData && (
             <div className="space-y-4 mt-4">

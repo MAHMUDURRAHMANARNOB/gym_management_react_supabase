@@ -88,8 +88,16 @@ export const createMember = async (email: string | null, memberData: any) => {
   return response.data;
 };
 
-export const updateMember = async (id: number, memberData: Partial<Member>) => {
-  const response = await api.put(`/members/${id}`, memberData); // Note: Backend needs to support PUT by ID
+// export const updateMember = async (id: number, memberData: Partial<Member>) => {
+//   const response = await api.put(`/api/members/${id}`, memberData); // Note: Backend needs to support PUT by ID
+//   return response.data;
+// };
+export const updateMember = async (id: number, memberData: Partial<Member>, email: string | null) => {
+  if (!email) throw new Error('No email provided');
+  console.log('Sending member data:', memberData , email); 
+  const response = await api.put(`/api/members/${id}`, memberData, {
+    headers: { 'User-Email': email },
+  });
   return response.data;
 };
 
