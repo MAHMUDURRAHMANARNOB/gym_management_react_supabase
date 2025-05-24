@@ -12,10 +12,19 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Configure CORS
+const allowedOrigins = ['http://localhost:5173', 'https://nfg-ten.vercel.app'];
+
 app.use(cors({
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'User-Email'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('CORS not allowed from this origin'));
+    }
+  },
+  credentials: true // optional: only if you're using cookies or authorization headers
 }));
 
 app.use(express.json());
