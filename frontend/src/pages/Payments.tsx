@@ -137,17 +137,36 @@ function Payments() {
       setError(`Missing required fields: ${missingFields.join(', ')}`);
       return;
     }
-
-    const normalizedData = {
-      member_id: Number(formData.member_id),
-      gym_id: formData.gym_id?.trim(),
-      total_amount: Number(formData.total_amount),
-      amount_paid: Number(formData.amount_paid),
-      is_fully_paid: Number(formData.total_amount) === Number(formData.amount_paid),
-      payment_date: formData.payment_date?.trim(),
-      package_type: formData.package_type?.trim(),
-      payment_method: formData.payment_method?.trim(),
+    // Calculate validity period based on package type
+    const getValidityMonths = (packageType: string) => {
+        switch(packageType) {
+        case 'Monthly': return 1;
+        case '3 Months': return 3;
+        case '6 Months': return 6;
+        case 'Yearly': return 12;
+        default: return 1;
+        }
     };
+    const normalizedData = {
+        member_id: Number(formData.member_id),
+        gym_id: formData.gym_id?.trim(),
+        total_amount: Number(formData.total_amount),
+        amount_paid: Number(formData.amount_paid),
+        is_fully_paid: Number(formData.total_amount) === Number(formData.amount_paid),
+        payment_date: formData.payment_date?.trim(),
+        package_type: formData.package_type?.trim(),
+        payment_method: formData.payment_method?.trim(),
+        };
+        
+    const validityMonths = getValidityMonths(normalizedData.package_type!);
+    const validityEndDate = new Date(normalizedData.payment_date!);
+    validityEndDate.setMonth(validityEndDate.getMonth() + validityMonths);
+    // Add validity_end_date to the payment data
+    const paymentData = {
+        ...normalizedData,
+        validity_end_date: validityEndDate.toISOString()
+    };
+    
 
     try {
       setLoadingSubmit(true);

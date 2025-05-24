@@ -81,6 +81,13 @@ function MemberDetails() {
     }
   };
 
+  // Add this function to format the date
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString();
+};
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -340,6 +347,7 @@ function MemberDetails() {
                   </SelectContent>
                 </Select>
               </div>
+                
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
                 <Input
@@ -446,9 +454,20 @@ function MemberDetails() {
               <div>
                 <span className="font-medium text-gray-600">Package Type:</span> {member.package_type}
               </div>
-              <div>
+              {/* <div>
                 <span className="font-medium text-gray-600">Status:</span> {member.status}
-              </div>
+              </div> */}
+              <div>
+                <span className="font-medium text-gray-600">Validity End Date:</span> {formatDate(member.validity_end_date)}
+                </div>
+                <div>
+                <span className="font-medium text-gray-600">Membership Status:</span> 
+                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                    member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                    {member.status}
+                </span>
+                </div>
             </div>
           </div>
           <div>
@@ -498,7 +517,7 @@ function MemberDetails() {
               <TableBody>
                 {memberPayments.map((payment) => (
                   <TableRow key={payment.id} className="hover:bg-gray-100">
-                    <TableCell>${payment.amount_paid}</TableCell>
+                    <TableCell>BDT {payment.amount_paid}</TableCell>
                     <TableCell>{payment.payment_date}</TableCell>
                     <TableCell>{payment.package_type}</TableCell>
                     <TableCell>{payment.payment_method}</TableCell>

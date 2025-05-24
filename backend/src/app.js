@@ -319,30 +319,124 @@ app.get('/api/payments/member/:memberId', async (req, res) => {
 
 
 // POST endpoint for adding a payment
+// app.post('/api/payments', async (req, res) => {
+//     const paymentData = req.body;
+//     console.log('Inserting payment data:', paymentData);
+//     const { data, error } = await supabase.from('payments').insert([paymentData]).select();
+//     if (error) {
+//     console.error('Supabase error:', error);
+//     return res.status(400).json({ error: error.message });
+//     }
+
+// // Record income from payment
+//     const incomeData = {
+//         source_type: 'member_payment',
+//         source_id: data[0].id,
+//         amount: paymentData.amount_paid,
+//         description: `Payment for ${paymentData.package_type} package`,
+//     };
+//     const { error: incomeError } = await supabase.from('income').insert([incomeData]);
+//     if (incomeError) {
+//         console.error('Income recording error:', incomeError);
+//     // Continue with payment success, log the error
+//     }
+
+//     res.status(201).json(data);
+// });
+// POST endpoint for adding a payment
 app.post('/api/payments', async (req, res) => {
     const paymentData = req.body;
     console.log('Inserting payment data:', paymentData);
-    const { data, error } = await supabase.from('payments').insert([paymentData]).select();
-    if (error) {
-    console.error('Supabase error:', error);
-    return res.status(400).json({ error: error.message });
-    }
+    
+    try {
+        // First create the payment
+        const { data: payment, error: paymentError } = await supabase
+            .from('payments')
+            .insert([paymentData])
+            .select()
+            .single();
+            
+        if (paymentError) {
+            console.error('Supabase error:', paymentError);
+            return res.status(400).json({ error: paymentError.message });
+        }
 
-// Record income from payment
-    const incomeData = {
-        source_type: 'member_payment',
-        source_id: data[0].id,
-        amount: paymentData.amount_paid,
-        description: `Payment for ${paymentData.package_type} package`,
-    };
-    const { error: incomeError } = await supabase.from('income').insert([incomeData]);
-    if (incomeError) {
-        console.error('Income recording error:', incomeError);
-    // Continue with payment success, log the error
-    }
+        // Calculate validity end date based on package type
+        let validityMonths = 1; // default to 1 month
+        if (paymentData.package_type === '3 Months') validityMonths = 3;
+        if (paymentData.package_type === '6 Months') validityMonths = 6;
+        if (paymentData.package_type === '12 Months') validityMonths = 12;
 
-    res.status(201).json(data);
+        const validityEndDate = new Date();
+        validityEndDate.setMonth(validityEndDate.getMonth() + validityMonths);
+
+        // Update member's validity_end_date and status
+        const { error: memberError } = await supabase
+            .from('members')
+            .update({
+                validity_end_date: validityEndDate.toISOString(),
+                status: 'Active',
+                package_type: paymentData.package_type,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', paymentData.member_id);
+
+        if (memberError) {
+            console.error('Error updating member validity:', memberError);
+            // Continue with payment success, log the error
+        }
+
+        // Record income from payment
+        const incomeData = {
+            source_type: 'member_payment',
+            source_id: payment.id,
+            amount: paymentData.amount_paid,
+            description: `Payment for ${paymentData.package_type} package`,
+        };
+        const { error: incomeError } = await supabase.from('income').insert([incomeData]);
+        if (incomeError) {
+            console.error('Income recording error:', incomeError);
+            // Continue with payment success, log the error
+        }
+
+        res.status(201).json(payment);
+    } catch (err) {
+        console.error('Payment processing error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
+
+// Function to update member statuses based on validity
+const updateMemberStatuses = async () => {
+    const now = new Date().toISOString();
+    
+    // Update expired members to Inactive
+    const { error: expireError } = await supabase
+        .from('members')
+        .update({ status: 'Inactive' })
+        .lt('validity_end_date', now)
+        .neq('status', 'Inactive');
+
+    if (expireError) {
+        console.error('Error updating expired members:', expireError);
+    }
+
+    // Update active members whose validity is still good
+    const { error: activateError } = await supabase
+        .from('members')
+        .update({ status: 'Active' })
+        .gte('validity_end_date', now)
+        .neq('status', 'Active');
+
+    if (activateError) {
+        console.error('Error updating active members:', activateError);
+    }
+};
+
+// Run this check periodically (e.g., every hour)
+setInterval(updateMemberStatuses, 3600000); // 3600000 ms = 1 hour
+// Also run once when server starts
+updateMemberStatuses();
 
 // Income routes
 app.get('/api/income', async (req, res) => {

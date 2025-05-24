@@ -177,6 +177,12 @@ function PaymentDetails() {
             <span className="text-sm font-semibold text-gray-600">Package Type</span>
             <p className="text-lg text-gray-900">{payment.package_type}</p>
           </div>
+            <div className="p-3 rounded-lg hover:bg-gray-50 transition-colors">
+            <span className="text-sm font-semibold text-gray-600">Validity Period</span>
+            <p className="text-lg text-gray-900">
+                {payment.package_type} (until {payment.validity_end_date ? new Date(payment.validity_end_date).toLocaleDateString() : 'N/A'})
+            </p>
+            </div>
           <div className="p-3 rounded-lg">
             <span className="text-sm font-semibold text-gray-600">Payment Method</span>
             <p className="text-lg text-gray-900">{payment.payment_method}</p>

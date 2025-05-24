@@ -46,7 +46,7 @@ function Members() {
     email: '',
     phone: '',
     package_type: 'Monthly',
-    status: 'Active',
+    status: 'Inactive',
     height: '',
     weight: '',
     chest: '',
@@ -137,7 +137,7 @@ function Members() {
         email: '',
         phone: '',
         package_type: 'Monthly',
-        status: 'Active',
+        status: 'Inactive',
         height: '',
         weight: '',
         chest: '',
@@ -727,12 +727,13 @@ function Members() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-primary font-bold">Gym ID</TableHead>
-              <TableHead className="text-primary font-bold">Name</TableHead>
-              <TableHead className="text-primary font-bold">Email</TableHead>
-              <TableHead className="text-primary font-bold">Phone</TableHead>
-              <TableHead className="text-primary font-bold">Package</TableHead>
-              <TableHead className="text-primary font-bold">Status</TableHead>
+                <TableHead className="text-primary font-bold">Gym ID</TableHead>
+                <TableHead className="text-primary font-bold">Name</TableHead>
+                <TableHead className="text-primary font-bold">Email</TableHead>
+                <TableHead className="text-primary font-bold">Phone</TableHead>
+                <TableHead className="text-primary font-bold">Package</TableHead>
+                <TableHead className="text-primary font-bold">Validity End</TableHead>
+                <TableHead className="text-primary font-bold">Status</TableHead>
               {/* <TableHead className="text-primary">Actions</TableHead> */}
             </TableRow>
           </TableHeader>
@@ -750,12 +751,20 @@ function Members() {
                   onClick={() => navigate(`/member-details/${member.id}`)}
                   className="cursor-pointer hover:bg-gray-100"
                 >
-                  <TableCell>{member.gym_id}</TableCell>
-                  <TableCell>{`${member.first_name} ${member.last_name}`}</TableCell>
-                  <TableCell>{member.email}</TableCell>
-                  <TableCell>{member.phone}</TableCell>
-                  <TableCell>{member.package_type}</TableCell>
-                  <TableCell>{member.status}</TableCell>
+                    <TableCell>{member.gym_id}</TableCell>
+                    <TableCell>{`${member.first_name} ${member.last_name}`}</TableCell>
+                    <TableCell>{member.email}</TableCell>
+                    <TableCell>{member.phone}</TableCell>
+                    <TableCell>{member.package_type}</TableCell>
+                    {/* <TableCell>{member.status}</TableCell> */}
+                    <TableCell>{member.validity_end_date ? new Date(member.validity_end_date).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                        {member.status}
+                    </span>
+                    </TableCell>
                   {/* <TableCell>
                     <div className="flex gap-2">
                       <Button

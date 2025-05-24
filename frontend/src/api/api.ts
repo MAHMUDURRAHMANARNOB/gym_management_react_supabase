@@ -2,7 +2,7 @@
 import axios from 'axios';
 // import { loginSuccess } from '../store/authSlice';
 const api = axios.create({
-  // baseURL: 'http://localhost:3000',
+//   baseURL: 'http://localhost:3000',
   baseURL: 'https://nfg-y0ms.onrender.com',
   headers: {
     'Content-Type': 'application/json',
@@ -263,6 +263,27 @@ export const deleteAsset = async (id: number) => {
 
 
 // Interfaces
+// export interface Member {
+//   id: number;
+//   gym_id: string;
+//   first_name: string;
+//   last_name: string;
+//   email: string;
+//   phone: string;
+//   package_type: string;
+//   status: string;
+//   height?: string;
+//   weight?: string;
+//   chest?: string;
+//   waist?: string;
+//   hips?: string;
+//   blood_group?: string;
+//   bmi?: number;
+//   goal?: string;
+//   gender?: string;
+//   created_at?: string;
+//   updated_at?: string;
+// }
 export interface Member {
   id: number;
   gym_id: string;
@@ -283,9 +304,23 @@ export interface Member {
   gender?: string;
   created_at?: string;
   updated_at?: string;
+  validity_end_date?: string; // Add this
 }
 
+// export interface Payment {
+//   id: number;
+//   member_id: number;
+//   gym_id: string;
+//   total_amount: number;
+//   amount_paid: number;
+//   is_fully_paid: boolean;
+//   payment_date: string;
+//   package_type: string;
+//   payment_method: string;
+//   created_at: string;
+// }
 export interface Payment {
+  validity_end_date: any;
   id: number;
   member_id: number;
   gym_id: string;
@@ -296,6 +331,7 @@ export interface Payment {
   package_type: string;
   payment_method: string;
   created_at: string;
+  validity_months?: number; // Optional field for frontend use
 }
 
 export interface Expense {
