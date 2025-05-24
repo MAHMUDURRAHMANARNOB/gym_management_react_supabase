@@ -3,7 +3,7 @@ import axios from 'axios';
 // import { loginSuccess } from '../store/authSlice';
 const api = axios.create({
   // baseURL: 'http://localhost:3000',
-  baseURL: 'https://your-render-backend-url.onrender.com',
+  baseURL: 'https://nfg-y0ms.onrender.com',
   headers: {
     'Content-Type': 'application/json',
   },
